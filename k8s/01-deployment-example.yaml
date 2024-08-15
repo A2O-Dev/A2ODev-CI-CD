@@ -17,7 +17,7 @@ spec:
         image: 172.29.81.0:8083/nexus/docker/test/staging/a2odev-custom-nginx-image:latest # Imagen previamente subida a nexus en el proceso CI
         envFrom:
           - secretRef:
-              name: doppler-poc-secret # Kubernetes secret name
+              name: doppler-test-secret # Kubernetes secret name
         ports:
         - containerPort: 80
 ---
