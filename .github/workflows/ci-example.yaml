@@ -82,7 +82,7 @@ jobs:
 
       - name: Tag Docker image with latest
         run: |
-          docker tag ${{vars.DOCKER_IMAGE}} ${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}/nexus/docker/${{vars.PROJECT_NAME}}/staging/${{vars.DOCKER_IMAGE}}:latest
+          docker tag ${{vars.DOCKER_IMAGE}} ${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}/nexus/docker/${{vars.PROJECT_NAME}}/staging/${{vars.DOCKER_IMAGE}}:1.01
 
       - name: Push Docker image to Nexus Repository
         run: |
