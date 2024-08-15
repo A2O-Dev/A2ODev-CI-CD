@@ -1,0 +1,89 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature/*
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  A2ODEV-CI:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Zerotier Configuration
+        uses: zerotier/github-action@v1
+        with:
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          auth_token: ${{ secrets.ZEROTIER_CENTRAL_TOKEN }}
+
+      - name: Ping to Nexus Sever InOffice
+        shell: bash
+        run: |
+          count=3
+          while ! ping -c 3 ${{ vars.SONARQUBE_IP_SERVER }} ; do
+            echo "waiting..." ;
+            sleep 1 ;
+            let count=count-1
+          done
+          echo "success ping connection to server inOffice ${{ vars.SONARQUBE_IP_SERVER }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install and Set up Docker on Runner 
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release
+          sudo mkdir -m 0755 -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$(lsb_release -i | awk '{ print tolower($3) }') $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin
+
+      - name: Set up Docker daemon.json for Nexus Server
+        run: |
+          echo '{"insecure-registries": ["${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}"]}' | sudo tee /etc/docker/daemon.json
+
+      - name: Restart Docker
+        run: sudo systemctl restart docker
+
+      - name: Verify Docker Configuration
+        run: cat /etc/docker/daemon.json
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v2.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName="${{ vars.SONAR_PROJECT_NAME }}"
+            -Dsonar.sources=.
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -X
+
+      - name: Build Docker image from this Repository 
+        shell: bash
+        run: |
+          docker build -t ${{vars.DOCKER_IMAGE}} .
+
+      - name: Docker login into Nexus Repository server
+        run: |
+          echo '${{ secrets.NEXUS_PASSWORD }}' | docker login -u '${{ vars.NEXUS_USERNAME }}' --password-stdin ${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}
+
+      - name: Tag Docker image with latest
+        run: |
+          docker tag ${{vars.DOCKER_IMAGE}} ${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}/nexus/docker/${{vars.PROJECT_NAME}}/staging/${{vars.DOCKER_IMAGE}}:latest
+
+      - name: Push Docker image to Nexus Repository
+        run: |
+          docker push ${{ vars.NEXUS_IP_SERVER }}:${{vars.NEXUS_PORT}}/nexus/docker/${{vars.PROJECT_NAME}}/staging/${{vars.DOCKER_IMAGE}}:latest
