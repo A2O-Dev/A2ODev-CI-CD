@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           doppler configure set token $DOPPLER_TOKEN
-          doppler secrets get DOPPLER_TOKEN_FOR_SSH_KEYS --no-check-version --silent --plain > ~/.ssh/id_rsa
+          doppler secrets get PRIVATE_RSA_KEY_FOR_SSH_GITHUB_ACTIONS --no-check-version --silent --plain > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           echo "Public RSA Key retrieved and saved to id_rsa"
 
