@@ -77,4 +77,4 @@ jobs:
       - name: SSH Connection
         shell: bash
         run: | 
-          ssh {{ vars.SSH_USER_GITHUB_ACTIONS }}@${{ vars.IP_TARGET_SERVER }} 'whoami && hostname'
+          ssh ${{ vars.SSH_USER_GITHUB_ACTIONS }}@${{ vars.IP_TARGET_SERVER }} 'whoami && hostname'
