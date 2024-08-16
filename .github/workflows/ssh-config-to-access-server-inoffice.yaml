@@ -1,0 +1,67 @@
+name: SSH Conection to Server InOffice
+
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
+      environment:
+        description: 'Environment to run tests against'
+        type: environment
+        required: false
+
+jobs:
+  SSH-Conection-to-Server-inOffice:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Zerotier Configuration
+        uses: zerotier/github-action@v1
+        with:
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          auth_token: ${{ secrets.ZEROTIER_CENTRAL_TOKEN }}
+
+      - name: Ping Host
+        shell: bash
+        run: |
+          count=3
+          while ! ping -c 3 ${{ vars.IP_TARGET_SERVER }} ; do
+            echo "waiting..." ;
+            sleep 1 ;
+            let count=count-1
+          done
+          echo "ping success to server inOffice ${{ vars.IP_TARGET_SERVER }}"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3    
+
+      - name: SSH Connection Configuration
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          cat ssh-config/known_hosts >> ~/.ssh/known_hosts
+          cat ssh-config/config >> ~/.ssh/config
+          cat ssh-config/id_rsa >> ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Verify SSH Configuration
+        run: |
+          ls -l ~/.ssh
+          cat ~/.ssh/known_hosts
+          cat ~/.ssh/config
+      
+      - name: SSH Connection
+        shell: bash
+        run: | 
+          ssh {{ vars.SSH_USER_GITHUB_ACTIONS }}@${{ vars.IP_TARGET_SERVER }} 'whoami && hostname'
