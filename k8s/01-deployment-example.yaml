@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: 172.29.81.0:8083/nexus/docker/test/staging/a2odev-custom-nginx-image:1.01 # Imagen previamente subida a nexus en el proceso CI
+        image: 172.29.81.0:8083/nexus/docker/poc-ci-cd/staging/a2odev-nginx-custom:1.01 # Imagen previamente subida a nexus en el proceso CI
         envFrom:
           - secretRef:
               name: doppler-test-secret # Kubernetes secret name
